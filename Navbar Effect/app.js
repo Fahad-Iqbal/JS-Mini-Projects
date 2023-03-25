@@ -47,3 +47,7 @@ function navScroll(entries) {
 sections.forEach(function (section) {
   observer.observe(section);
 });
+
+const scroll = new SmoothScroll("nav a[href*='#']", {
+  speed: 500,
+});

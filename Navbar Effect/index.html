@@ -10,34 +10,38 @@
     <header>
       <nav>
         <ul>
-          <li><a data-page="home" href="#">Home</a></li>
-          <li><a data-page="about" href="#">About</a></li>
-          <li><a data-page="services" href="#">Services</a></li>
-          <li><a data-page="contact" href="#">Contact</a></li>
+          <li><a data-page="home" href="#home">Home</a></li>
+          <li><a data-page="about" href="#about">About</a></li>
+          <li><a data-page="services" href="#services">Services</a></li>
+          <li><a data-page="contact" href="#contact">Contact</a></li>
           <div class="trans"></div>
         </ul>
       </nav>
     </header>
 
     <main>
-      <section data-index="0" class="home">
+      <section data-index="0" id="home" class="home">
         <img src="img/1.jpg" alt="" />
       </section>
 
-      <section data-index="1" class="about">
+      <section data-index="1" id="about" class="about">
         <img src="img/2.jpg" alt="" />
       </section>
 
-      <section data-index="2" class="services">
+      <section data-index="2" id="services" class="services">
         <img src="img/3.jpg" alt="" />
       </section>
 
-      <section data-index="3" class="contact">
+      <section data-index="3" id="contact" class="contact">
         <img src="img/4.jpg" alt="" />
       </section>
     </main>
 
     <!-- ---------------------------------------------------- -->
+    <!-- https://github.com/cferdinandi/smooth-scroll -->
+    <!-- ----------------------------- -->
+    <!-- External JS File (Smooth Scroll) -->
+    <script src="https://cdn.jsdelivr.net/gh/cferdinandi/smooth-scroll@15.0.0/dist/smooth-scroll.polyfills.min.js"></script>
     <!-- JS File -->
     <script src="app.js"></script>
   </body>
