@@ -112,7 +112,7 @@ h3 {
 #block {
   width: 150px;
   height: 150px;
-  background-color: #000000;
+  background-color: rgb(0, 0, 0);
   position: absolute;
   left: 0;
   top: 0;
