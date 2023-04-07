@@ -53,6 +53,7 @@ h1 {
 .clear i {
   font-size: 30px;
   color: #fff;
+  cursor: pointer;
 }
 
 /* ------------ content ------------ */
