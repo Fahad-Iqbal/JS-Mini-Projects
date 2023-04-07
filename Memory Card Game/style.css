@@ -28,6 +28,16 @@ body {
   transform: scale(1);
   transform-style: preserve-3d;
   transition: transform 0.3s ease-out;
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+
+  /*
+    Introduced in Internet Explorer 10.
+    See http://ie.microsoft.com/testdrive/HTML5/msUserSelect/
+  */
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .front-face,
@@ -51,4 +61,17 @@ body {
 /* Dynamic Class */
 .memory-card.flip {
   transform: rotateY(180deg) perspective(1000px);
+}
+
+*.unselectable {
+  -moz-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-select: none;
+
+  /*
+    Introduced in Internet Explorer 10.
+    See http://ie.microsoft.com/testdrive/HTML5/msUserSelect/
+  */
+  -ms-user-select: none;
+  user-select: none;
 }
