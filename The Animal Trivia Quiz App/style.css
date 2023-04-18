@@ -131,7 +131,7 @@ body {
 }
 
 /* Progress Container */
-.progress-bar {
+.progress-box {
   height: 30px;
   width: 30px;
   background-color: lightgrey;
