@@ -92,8 +92,37 @@ function budgetIn(e) {
 function updateUI() {
   income = calculateTotal("income", ENTRY_LIST);
   outcome = calculateTotal("expense", ENTRY_LIST);
-  balance = calculateBalance(income, outcome);
-  console.log(income, outcome, balance);
+  balance = Math.abs(calculateBalance(income, outcome));
+
+  let sign = income >= outcome ? "$" : "-$";
+
+  balanceEl.innerHTML = `<p>${sign}</p><p>${balance}</p>`;
+  incomeTotalEl.innerHTML = `<p>$</p><p>${income}</p>`;
+  outcomeTotalEl.innerHTML = `<p>$</p><p>${outcome}</p>`;
+
+  clearElement([expenseList, incomeList, allList]);
+}
+
+// showEntry Function
+
+function showEntry(list, type, title, amount, id) {
+  const entry = `<li id="${id}" class="${type}">
+                    <div class="entry">${title}: $${amount}</div> 
+                    <div class="action">
+                      <i class="far fa-edit></i>
+                      <i class="fas fa-trash></i>
+                    </div>                      
+                </li>`;
+
+  const position = "afterbegin";
+
+  list.insertAdjacentHTML(position, entry);
+}
+
+function clearElement(elements) {
+  elements.forEach(function (element) {
+    element.innerHTML = "";
+  });
 }
 
 // calculateBalance Function
