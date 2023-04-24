@@ -49,6 +49,74 @@ allBtn.addEventListener("click", function () {
   inactive([expenseBtn, incomeBtn]);
 });
 
+addExpense.addEventListener("click", budgetOut);
+
+addIncome.addEventListener("click", budgetIn);
+
+// addExpense/ addIncome Enter key event listener
+
+document.addEventListener("keypress", function (e) {
+  if (e.key !== "Enter") return;
+  budgetOut(e);
+  budgetIn(e);
+});
+
+function budgetOut(e) {
+  e.preventDefault();
+  if (!expenseTitle.value || !expenseAmount.value) return;
+
+  let expense = {
+    type: "expense",
+    title: expenseTitle.value,
+    amount: parseFloat(expenseAmount.value),
+  };
+  ENTRY_LIST.push(expense);
+  updateUI();
+  clearInput([expenseTitle, expenseAmount]);
+}
+
+function budgetIn(e) {
+  e.preventDefault();
+  if (!incomeTitle.value || !incomeAmount.value) return;
+
+  let income = {
+    type: "income",
+    title: incomeTitle.value,
+    amount: parseFloat(incomeAmount.value),
+  };
+  ENTRY_LIST.push(income);
+  updateUI();
+  clearInput([incomeTitle, incomeAmount]);
+}
+
+function updateUI() {
+  income = calculateTotal("income", ENTRY_LIST);
+  outcome = calculateTotal("expense", ENTRY_LIST);
+  balance = calculateBalance(income, outcome);
+  console.log(income, outcome, balance);
+}
+
+// calculateBalance Function
+function calculateBalance(income, outcome) {
+  return income - outcome;
+}
+
+function calculateTotal(type, list) {
+  let sum = 0;
+  list.forEach(function (entry) {
+    if (entry.type === type) {
+      sum += entry.amount;
+    }
+  });
+  return sum;
+}
+
+function clearInput(inputs) {
+  inputs.forEach(function (input) {
+    input.value = "";
+  });
+}
+
 // show Function
 
 function show(element) {
