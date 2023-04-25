@@ -24,9 +24,12 @@ const incomeTitle = document.querySelector("#income-title-input");
 const incomeAmount = document.querySelector("#income-amount-input");
 
 // Necessary Variables
-let ENTRY_LIST = [];
+let ENTRY_LIST;
 let [balance, income, outcome] = [0, 0, 0];
 let [deleteIcon, editIcon] = ["fas fa-trash", "far fa-edit"];
+
+ENTRY_LIST = JSON.parse(localStorage.getItem("entry-list")) || [];
+updateUI();
 
 // expenseBtn Event Listener
 
@@ -52,6 +55,43 @@ allBtn.addEventListener("click", function () {
 addExpense.addEventListener("click", budgetOut);
 
 addIncome.addEventListener("click", budgetIn);
+
+lists.forEach(function (list) {
+  list.addEventListener("click", function (e) {
+    if (e.target.localName !== "i") return;
+    let targetBtn = e.target.attributes.class.value;
+    let entry = e.target.parentNode.parentNode;
+    let targetId = entry.attributes.id.value;
+    if (targetBtn === editIcon) {
+      editEntry(targetId);
+    } else if (targetBtn === deleteIcon) {
+      deleteEntry(targetId);
+    }
+  });
+});
+
+// deleteEntry Function
+function deleteEntry(targetId) {
+  ENTRY_LIST.splice(targetId, 1);
+  updateUI();
+}
+
+// editEntry Function
+function editEntry(targetId) {
+  let targetType = ENTRY_LIST[targetId].type;
+  let targetAmount = ENTRY_LIST[targetId].amount;
+  let targetTitle = ENTRY_LIST[targetId].title;
+
+  if (targetType === "income") {
+    incomeAmount.value = targetAmount;
+    incomeTitle.value = targetTitle;
+  } else if (targetType === "expense") {
+    expenseAmount.value = targetAmount;
+    expenseTitle.value = targetTitle;
+  }
+
+  deleteEntry(targetId);
+}
 
 // addExpense/ addIncome Enter key event listener
 
@@ -112,6 +152,8 @@ function updateUI() {
   });
 
   updateChart(income, outcome);
+
+  localStorage.setItem("entry-list", JSON.stringify(ENTRY_LIST));
 }
 
 // showEntry Function
