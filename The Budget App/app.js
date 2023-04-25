@@ -101,6 +101,15 @@ function updateUI() {
   outcomeTotalEl.innerHTML = `<p>$</p><p>${outcome}</p>`;
 
   clearElement([expenseList, incomeList, allList]);
+
+  ENTRY_LIST.forEach(function (entry, index) {
+    if (entry.type === "expense") {
+      showEntry(expenseList, entry.type, entry.title, entry.amount, index);
+    } else if (entry.type === "income") {
+      showEntry(incomeList, entry.type, entry.title, entry.amount, index);
+    }
+    showEntry(allList, entry.type, entry.title, entry.amount, index);
+  });
 }
 
 // showEntry Function
@@ -109,8 +118,8 @@ function showEntry(list, type, title, amount, id) {
   const entry = `<li id="${id}" class="${type}">
                     <div class="entry">${title}: $${amount}</div> 
                     <div class="action">
-                      <i class="far fa-edit></i>
-                      <i class="fas fa-trash></i>
+                      <i class="far fa-edit"></i>
+                      <i class="fas fa-trash"></i>
                     </div>                      
                 </li>`;
 
