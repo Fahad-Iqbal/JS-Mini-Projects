@@ -55,7 +55,7 @@ input {
   display: inline-block;
 }
 
-.search-result {
+.search-results {
   margin-top: 50px;
   width: 100%;
   display: grid;
