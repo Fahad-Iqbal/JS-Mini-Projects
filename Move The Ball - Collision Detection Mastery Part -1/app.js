@@ -35,13 +35,15 @@ function arrowInputs() {
   } else if (downDir && yP + radius < canvasEl.height) {
     yP = yP + speed;
     canvasContext.strokeStyle = "green";
-  } else if (rightDir && xP + radius < canvasEl.width) {
+  }
+  if (rightDir && xP + radius < canvasEl.width) {
     xP = xP + speed;
     canvasContext.strokeStyle = "green";
   } else if (leftDir && xP - radius > 0) {
     xP = xP - speed;
     canvasContext.strokeStyle = "green";
-  } else if (
+  }
+  if (
     xP === radius ||
     xP === canvasEl.width - radius ||
     yP === radius ||
