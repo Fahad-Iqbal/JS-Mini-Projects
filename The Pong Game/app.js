@@ -149,6 +149,13 @@ function paddleColliDete(BALL, PADDLE) {
   );
 }
 
+// reset the ball
+function resetBall() {
+  ball.xP = canvasEl.width / 2;
+  ball.yP = canvasEl.height / 2;
+  ball.speed = 7;
+}
+
 // The everything manager function
 function everythingManager() {
   ball.xP += ball.xV;
@@ -182,9 +189,22 @@ function everythingManager() {
 
     // updating the velocity when the ball hits any paddle
     ball.xV = direction * ball.speed * Math.cos(bounceAngle);
-    ball.yV = direction * ball.speed * Math.sin(bounceAngle);
+    ball.yV = ball.speed * Math.sin(bounceAngle);
 
     // after each bounce back increase speed
+    ball.speed += 0.5;
+  }
+
+  if (ball.xP + ball.radius < 0) {
+    AIScore.play();
+    playerPaddleAI.score += 1;
+
+    resetBall();
+  } else if (ball.xP - ball.radius > canvasEl.width) {
+    RIScore.play();
+    playerPaddleRI.score += 1;
+
+    resetBall();
   }
 }
 
