@@ -2,6 +2,7 @@ const canvasEl = document.querySelector("canvas");
 const canvasContext = canvasEl.getContext("2d");
 
 // game parameters
+const DELAY_AI = 0.5; // seconds for the AI to take its turn
 const GRID_CIRCLE = 0.7; // circle size as a fraction of the cell size
 const GRID_COLS = 7; // number of game columns
 const GRID_ROWS = 6; // number of game rows
@@ -16,6 +17,10 @@ const COLOR_AI_DARK = "darkgreen";
 const COLOR_RI = "orange";
 const COLOR_RI_DARK = " darkgoldenrod";
 
+const COLOR_TIE = "darkgrey";
+const COLOR_TIE_DARK = "black";
+const COLOR_WIN = "blue";
+
 let gameOver,
   gameTied,
   grid = [],
@@ -24,6 +29,11 @@ let gameOver,
 
 let width, height, margin;
 
+const TEXT_AI = "Computer";
+const TEXT_RI = "Human";
+const TEXT_TIE = "Draw";
+const TEXT_WIN = "Won";
+
 canvasEl.addEventListener("click", click);
 canvasEl.addEventListener("mousemove", highlightGrid);
 // window resize event listener
@@ -31,6 +41,8 @@ window.addEventListener("resize", setDimensions);
 
 class Cell {
   constructor(left, top, w, h, row, col) {
+    this.h = h;
+    this.w = w;
     this.left = left;
     this.right = left + w;
     this.top = top;
@@ -42,6 +54,7 @@ class Cell {
     this.r = (w * GRID_CIRCLE) / 2;
     this.highlight = null;
     this.owner = null;
+    this.winner = false;
   }
 
   // contains function
@@ -60,9 +73,9 @@ class Cell {
     canvasContext.fill();
 
     // draw highlighting
-    if (this.highlight != null) {
+    if (this.winner || this.highlight != null) {
       // color
-      color = this.highlight ? COLOR_RI : COLOR_AI;
+      color = this.winner ? COLOR_WIN : this.highlight ? COLOR_RI : COLOR_AI;
       // draw a circle around the perimeter
       canvasContext.lineWidth = this.r / 4;
       canvasContext.strokeStyle = color;
@@ -86,9 +99,14 @@ function playGame(timeNow) {
 
   timeDiff = (timeNow - timeLast) / 1000;
   timeLast = timeNow;
+
+  // AI
+  AI(timeDiff);
+
   //  draw functions
   drawBackground();
   drawGrid();
+  drawText();
   // calling the next frame
   requestAnimationFrame(playGame);
 }
@@ -134,6 +152,71 @@ function createGrid() {
 }
 
 function checkWin(row, col) {
+  // geetting all the cells from each direction
+  let diagonalLeft = [],
+    diagonalRight = [],
+    horizontal = [],
+    vertical = [];
+
+  for (let i = 0; i < GRID_ROWS; i++) {
+    for (let j = 0; j < GRID_COLS; j++) {
+      // HORIZONTAL CELLS
+      if (i == row) {
+        horizontal.push(grid[i][j]);
+      }
+
+      if (j == col) {
+        vertical.push(grid[i][j]);
+      }
+
+      // diagonal left
+      if (i - j == row - col) {
+        diagonalLeft.push(grid[i][j]);
+      }
+      // diagonal right
+      if (i + j == row + col) {
+        diagonalRight.push(grid[i][j]);
+      }
+    }
+  }
+  // if any four in a row, return win
+  return (
+    connect4(diagonalLeft) ||
+    connect4(diagonalRight) ||
+    connect4(horizontal) ||
+    connect4(vertical)
+  );
+}
+
+function connect4(cells = []) {
+  let count = 0;
+  let lastOwner = null;
+
+  let winningCells = [];
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i].owner == null) {
+      count = 0;
+      winningCells = [];
+    }
+    // same owner, add to the count
+    else if (cells[i].owner == lastOwner) {
+      count++;
+      winningCells.push(cells[i]);
+    } else {
+      count = 1;
+      winningCells = [];
+      winningCells.push(cells[i]);
+    }
+    // set the lastOwner
+    lastOwner = cells[i].owner;
+
+    if (count == 4) {
+      for (let cell of winningCells) {
+        cell.winner = true;
+      }
+      return true;
+    }
+  }
   return false;
 }
 
@@ -168,7 +251,7 @@ function highlightCell(x, y) {
 
 function highlightGrid(e) {
   if (!playersTurn || gameOver) {
-    // return;
+    return;
   }
   highlightCell(e.clientX, e.clientY);
 }
@@ -211,6 +294,131 @@ function drawGrid() {
   }
 }
 
+function drawText() {
+  if (!gameOver) {
+    return;
+  }
+  // set up text parameters
+  let size = grid[0][0].h;
+  canvasContext.fillStyle = gameTied
+    ? COLOR_TIE
+    : playersTurn
+    ? COLOR_RI
+    : COLOR_AI;
+  canvasContext.font = size + "px sans-serif";
+  canvasContext.lineJoin = "round";
+  canvasContext.lineWidth = size / 10;
+  canvasContext.strokeStyle = gameTied
+    ? COLOR_TIE_DARK
+    : playersTurn
+    ? COLOR_RI_DARK
+    : COLOR_AI_DARK;
+  canvasContext.textAlign = "center";
+  canvasContext.textBaseline = "middle";
+  let offset = size * 0.55;
+  let text = gameTied ? TEXT_TIE : playersTurn ? TEXT_RI : TEXT_AI;
+
+  if (gameTied) {
+    canvasContext.strokeText(text, width / 2, height / 2);
+    canvasContext.fillText(text, width / 2, height / 2);
+  } else {
+    canvasContext.strokeText(text, width / 2, height / 2 - offset);
+    canvasContext.fillText(text, width / 2, height / 2 - offset);
+
+    canvasContext.strokeText(TEXT_WIN, width / 2, height / 2 + offset);
+    canvasContext.fillText(TEXT_WIN, width / 2, height / 2 + offset);
+  }
+}
+
+function AI(diff) {
+  if (playersTurn || gameOver) {
+    return;
+  }
+
+  // countdown -> delay the AI until it make its selection
+  if (timeAI > 0) {
+    timeAI -= diff;
+    if (timeAI <= 0) {
+      selectCell();
+    }
+    return;
+  }
+
+  // Setting Up the AI algorithm
+  let options = [];
+  options[0] = []; // AI wins
+  options[1] = []; // block the RI
+  options[2] = []; // not an important move
+  options[3] = []; // lets the RI win
+
+  // loop through each col
+  let cell;
+  for (let i = 0; i < GRID_COLS; i++) {
+    cell = highlightCell(grid[0][i].centerX, grid[0][i].centerY);
+    if (cell == null) {
+      continue;
+    }
+
+    // first priority, AI wins
+    cell.owner = playersTurn; // AI turn
+    if (checkWin(cell.row, cell.col)) {
+      options[0].push(i);
+    } else {
+      cell.owner = !playersTurn; //RI turn
+      if (checkWin(cell.row, cell.col)) {
+        options[1].push(i);
+      } else {
+        cell.owner = playersTurn;
+
+        // check cell above
+        if (cell.row > 0) {
+          grid[cell.row - 1][cell.col].owner = !playersTurn;
+          // fourth priority, do not let the player win
+
+          if (checkWin(cell.row - 1, cell.col)) {
+            options[3].push(i);
+          }
+          // third priority, not an important move
+          else {
+            options[2].push(i);
+          }
+          // deselect the cell above
+          grid[cell.row - 1][cell.col].owner = null;
+        }
+        // no row above, third priority
+        else {
+          options[2].push(i);
+        }
+      }
+    }
+    //  cancel the highlight and selection
+    cell.highlight = null;
+    cell.owner = null;
+  }
+
+  // clear the winning cells
+  for (let row of grid) {
+    for (let cell of row) {
+      cell.winner = false;
+    }
+  }
+  // randomly select a column in a priority order
+  let col;
+  if (options[0].length > 0) {
+    col = options[0][Math.floor(Math.random() * options[0].length)];
+  } else if (options[1].length > 0) {
+    col = options[1][Math.floor(Math.random() * options[1].length)];
+  } else if (options[2].length > 0) {
+    col = options[2][Math.floor(Math.random() * options[2].length)];
+  } else if (options[3].length > 0) {
+    col = options[3][Math.floor(Math.random() * options[3].length)];
+  }
+
+  // highlight the selected cell
+  highlightCell(grid[0][col].centerX, grid[0][col].centerY);
+  timeAI = DELAY_AI;
+}
+
 function selectCell() {
   let highlighting = false;
   OUTERLOOP: for (let row of grid) {
@@ -232,6 +440,20 @@ function selectCell() {
   }
 
   if (!gameOver) {
+    gameTied = true;
+    for (let row of grid) {
+      for (let cell of row) {
+        if (cell.owner == null) {
+          gameTied = false;
+        }
+      }
+    }
+    if (gameTied) {
+      gameOver = true;
+    }
+  }
+  if (!gameOver) {
+    // switch player if game isn't over
     playersTurn = !playersTurn;
   }
 }
