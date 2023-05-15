@@ -31,6 +31,12 @@ let width, height, wall;
 // initializing the paddle, ball classes
 let paddle, ball, touchX; // touch location
 
+// Touch Events
+canvasEl.addEventListener("touchcancel", touchCancel);
+canvasEl.addEventListener("touchend", touchEnd);
+canvasEl.addEventListener("touchmove", touchMove, { passive: true });
+canvasEl.addEventListener("touchstart", touchStart, { passive: true });
+
 // Arrow key Events
 document.addEventListener("keydown", keyDown);
 document.addEventListener("keyup", keyUp);
@@ -55,6 +61,13 @@ function playGame() {
 
 // applyBallSpeed function
 function applyBallSpeed(angle) {
+  //  keeping the angle between two limits = (30 to 150) degrees
+  if (angle < Math.PI / 6) {
+    angle = Math.PI / 6;
+  } else if (angle > (Math.PI * 5) / 6) {
+    angle = (Math.PI * 5) / 6;
+  }
+
   ball.xV = Math.cos(angle) * ball.speed;
   ball.yV = -Math.sin(angle) * ball.speed;
 }
@@ -147,6 +160,35 @@ function setDimensions() {
   canvasEl.height = height;
 }
 
+// Touch events functions
+
+// function touch(x) {
+//   if (!x) {
+//     movePaddle(DIRECTION.STOP);
+//   } else if (x > paddle.x) {
+//     movePaddle(DIRECTION.RIGHT);
+//   } else if (x < paddle.x) {
+//     movePaddle(DIRECTION.LEFT);
+//   }
+// }
+function touchCancel() {
+  touchX = null;
+  movePaddle(DIRECTION.STOP);
+}
+function touchEnd() {
+  touchX = null;
+  movePaddle(DIRECTION.STOP);
+}
+function touchMove(e) {
+  touchX = e.touches[0].clientX;
+}
+function touchStart(e) {
+  if (serveBall()) {
+    return;
+  }
+  touchX = e.touches[0].clientX;
+}
+
 // updateBall function
 function updateBall() {
   // move the paddle
@@ -157,31 +199,52 @@ function updateBall() {
   if (ball.x < wall + ball.w / 2) {
     ball.x = wall + ball.w / 2;
     ball.xV = -ball.xV;
-    spinBall();
+    // spinBall();
   } else if (ball.x > width - wall - ball.w / 2) {
     ball.x = width - wall - ball.w / 2;
     ball.xV = -ball.xV;
-    spinBall();
+    // spinBall();
   } else if (ball.y < wall + ball.h / 2) {
     ball.y = wall + ball.h / 2;
     ball.yV = -ball.yV;
-    spinBall();
+    // spinBall();
   }
 
   // bouncing the ball of the paddle
   if (
     ball.y > paddle.y - paddle.h / 2 - ball.h / 2 &&
-    ball.y < paddle.y + paddle.h / 2 &&
+    ball.y < paddle.y + paddle.h / 2 + ball.h / 2 &&
     ball.x > paddle.x - paddle.w / 2 - ball.w / 2 &&
     ball.x < paddle.x + paddle.w / 2 + ball.w / 2
   ) {
     ball.y = paddle.y - paddle.h / 2 - ball.h / 2;
     ball.yV = -ball.yV;
+    // modify the angle based off the ball spin
+    // find the current angle
+
+    let angle = Math.atan2(-ball.yV, ball.xV);
+    angle += ((Math.random() * Math.PI) / 2 - Math.PI / 4) * BALL_SPIN;
+    applyBallSpeed(angle);
+  }
+
+  //  ball moves out of the canvas
+  if (ball.y > canvasEl.height) {
+    outOfBounds();
   }
 }
 
 //  updatePaddle function
 function updatePaddle() {
+  // move the paddle with touch
+  if (touchX != null) {
+    if (touchX > paddle.x + wall) {
+      movePaddle(DIRECTION.RIGHT);
+    } else if (touchX < paddle.x - wall) {
+      movePaddle(DIRECTION.LEFT);
+    } else {
+      movePaddle(DIRECTION.STOP);
+    }
+  }
   //  move the paddle
   let lastPaddleX = paddle.x;
   paddle.x += (paddle.xV / 1000) * 20;
@@ -230,8 +293,13 @@ function serveBall() {
   let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
   let range = Math.PI - minBounceAngle * 2;
   let angle = Math.random() * range + minBounceAngle;
-  console.log(angle);
   applyBallSpeed(angle);
+  return true;
+}
+
+// outOfBounds function
+function outOfBounds() {
+  newGame();
 }
 
 setDimensions();
