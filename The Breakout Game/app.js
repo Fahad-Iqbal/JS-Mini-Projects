@@ -27,6 +27,9 @@ const ConX = canvasEl.getContext("2d");
 // Dimensions
 let width, height, wall;
 
+// initializing the paddle, ball classes
+let paddle, ball, touchX; // touch location
+
 // Resize window event
 window.addEventListener("resize", setDimensions);
 
@@ -35,12 +38,42 @@ window.addEventListener("resize", setDimensions);
 function playGame() {
   requestAnimationFrame(playGame);
   drawBackground();
+  drawWalls();
+  drawPaddle();
 }
 
 // drawBackground
 function drawBackground() {
   ConX.fillStyle = COLOR_BG;
   ConX.fillRect(0, 0, canvasEl.width, canvasEl.height);
+}
+
+function drawPaddle() {
+  ConX.fillStyle = COLOR_PADDLE;
+  ConX.fillRect(
+    paddle.x - paddle.w / 2,
+    paddle.y - paddle.h / 2,
+    paddle.w,
+    paddle.h
+  );
+}
+
+// drawWalls function
+function drawWalls() {
+  let halfWall = wall * 0.5;
+  ConX.lineWidth = wall;
+  ConX.strokeStyle = COLOR_WALL;
+  ConX.beginPath();
+  ConX.moveTo(halfWall, height);
+  ConX.lineTo(halfWall, halfWall);
+  ConX.lineTo(width - halfWall, halfWall);
+  ConX.lineTo(width - halfWall, height);
+  ConX.stroke();
+}
+
+// newGame function
+function newGame() {
+  paddle = new Paddle(PADDLE_WIDTH, wall, PADDLE_SPEED);
 }
 
 // setDimensions function
@@ -52,5 +85,18 @@ function setDimensions() {
   canvasEl.height = height;
 }
 
+// The Paddle class
+class Paddle {
+  constructor(paddleWidth, paddleHeight, paddleSpeed) {
+    this.w = paddleWidth * width;
+    this.h = paddleHeight / 2;
+    this.x = canvasEl.width / 2;
+    this.y = canvasEl.height - this.h * 3;
+    this.speed = paddleSpeed * width;
+    this.xV = 0;
+  }
+}
+
 setDimensions();
+newGame();
 playGame();
