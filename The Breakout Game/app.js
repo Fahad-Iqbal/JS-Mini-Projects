@@ -5,6 +5,7 @@ const PADDLE_SPEED = 0.5; // fraction of screen width per second -> it will cros
 const BALL_SPEED = 0.45; // fraction of screen height per second
 const BALL_SPIN = 0.2; // ball deflection of the paddle 0 == no spin, 1 == high spin
 const WALL = 0.02; // wall -ball -paddle as a fraction of the shortest screen dimension
+const MIN_BOUNCE_ANGLE = 30; // min bounce angle from the horizontal in degrees
 
 // colors
 const COLOR_BG = "black";
@@ -43,17 +44,30 @@ function playGame() {
   requestAnimationFrame(playGame);
   // update functions
   updatePaddle();
+  updateBall();
 
   // draw functions
   drawBackground();
   drawWalls();
   drawPaddle();
+  drawBall();
 }
 
+// applyBallSpeed function
+function applyBallSpeed(angle) {
+  ball.xV = Math.cos(angle) * ball.speed;
+  ball.yV = -Math.sin(angle) * ball.speed;
+}
 // drawBackground
 function drawBackground() {
   ConX.fillStyle = COLOR_BG;
   ConX.fillRect(0, 0, canvasEl.width, canvasEl.height);
+}
+
+// drawBall function
+function drawBall() {
+  ConX.fillStyle = COLOR_BALL;
+  ConX.fillRect(ball.x - ball.w / 2, ball.y - ball.h / 2, ball.w, ball.h);
 }
 
 function drawPaddle() {
@@ -82,6 +96,9 @@ function drawWalls() {
 // Arrow Keys Functions
 function keyDown(e) {
   switch (e.keyCode) {
+    case 32: // serve the ball
+      serveBall();
+      break;
     case 37:
       movePaddle(DIRECTION.LEFT);
       break;
@@ -118,6 +135,7 @@ function movePaddle(direction) {
 // newGame function
 function newGame() {
   paddle = new Paddle(PADDLE_WIDTH, wall, PADDLE_SPEED);
+  ball = new Ball(wall, BALL_SPEED);
 }
 
 // setDimensions function
@@ -127,6 +145,39 @@ function setDimensions() {
   wall = WALL * (height < width ? height : width);
   canvasEl.width = width;
   canvasEl.height = height;
+}
+
+// updateBall function
+function updateBall() {
+  // move the paddle
+  ball.x += (ball.xV / 1000) * 15;
+  ball.y += (ball.yV / 1000) * 15;
+
+  //  bouncing the ball off the wall
+  if (ball.x < wall + ball.w / 2) {
+    ball.x = wall + ball.w / 2;
+    ball.xV = -ball.xV;
+    spinBall();
+  } else if (ball.x > width - wall - ball.w / 2) {
+    ball.x = width - wall - ball.w / 2;
+    ball.xV = -ball.xV;
+    spinBall();
+  } else if (ball.y < wall + ball.h / 2) {
+    ball.y = wall + ball.h / 2;
+    ball.yV = -ball.yV;
+    spinBall();
+  }
+
+  // bouncing the ball of the paddle
+  if (
+    ball.y > paddle.y - paddle.h / 2 - ball.h / 2 &&
+    ball.y < paddle.y + paddle.h / 2 &&
+    ball.x > paddle.x - paddle.w / 2 - ball.w / 2 &&
+    ball.x < paddle.x + paddle.w / 2 + ball.w / 2
+  ) {
+    ball.y = paddle.y - paddle.h / 2 - ball.h / 2;
+    ball.yV = -ball.yV;
+  }
 }
 
 //  updatePaddle function
@@ -143,6 +194,19 @@ function updatePaddle() {
   }
 }
 
+// The Ball class
+class Ball {
+  constructor(ballSize, ballSpeed) {
+    this.w = ballSize;
+    this.h = ballSize;
+    this.x = paddle.x;
+    this.y = paddle.y - paddle.h / 2 - this.h / 2;
+    this.speed = ballSpeed * height;
+    this.xV = 0;
+    this.yV = 0;
+  }
+}
+
 // The Paddle class
 class Paddle {
   constructor(paddleWidth, paddleHeight, paddleSpeed) {
@@ -153,6 +217,21 @@ class Paddle {
     this.speed = paddleSpeed * width;
     this.xV = 0;
   }
+}
+
+// serveBall function
+function serveBall() {
+  // if the ball is already move don't allow serve
+  if (ball.yV != 0) {
+    return false;
+  }
+
+  // random angle, not less than the min bounce angle
+  let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
+  let range = Math.PI - minBounceAngle * 2;
+  let angle = Math.random() * range + minBounceAngle;
+  console.log(angle);
+  applyBallSpeed(angle);
 }
 
 setDimensions();
