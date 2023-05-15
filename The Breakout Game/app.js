@@ -30,6 +30,10 @@ let width, height, wall;
 // initializing the paddle, ball classes
 let paddle, ball, touchX; // touch location
 
+// Arrow key Events
+document.addEventListener("keydown", keyDown);
+document.addEventListener("keyup", keyUp);
+
 // Resize window event
 window.addEventListener("resize", setDimensions);
 
@@ -37,6 +41,10 @@ window.addEventListener("resize", setDimensions);
 
 function playGame() {
   requestAnimationFrame(playGame);
+  // update functions
+  updatePaddle();
+
+  // draw functions
   drawBackground();
   drawWalls();
   drawPaddle();
@@ -71,6 +79,42 @@ function drawWalls() {
   ConX.stroke();
 }
 
+// Arrow Keys Functions
+function keyDown(e) {
+  switch (e.keyCode) {
+    case 37:
+      movePaddle(DIRECTION.LEFT);
+      break;
+    case 39:
+      movePaddle(DIRECTION.RIGHT);
+      break;
+  }
+}
+
+function keyUp(e) {
+  switch (e.keyCode) {
+    case 37:
+    case 39:
+      movePaddle(DIRECTION.STOP);
+      break;
+  }
+}
+
+// movePaddle function
+function movePaddle(direction) {
+  switch (direction) {
+    case DIRECTION.LEFT:
+      paddle.xV = -paddle.speed;
+      break;
+    case DIRECTION.RIGHT:
+      paddle.xV = paddle.speed;
+      break;
+    case DIRECTION.STOP:
+      paddle.xV = 0;
+      break;
+  }
+}
+
 // newGame function
 function newGame() {
   paddle = new Paddle(PADDLE_WIDTH, wall, PADDLE_SPEED);
@@ -83,6 +127,20 @@ function setDimensions() {
   wall = WALL * (height < width ? height : width);
   canvasEl.width = width;
   canvasEl.height = height;
+}
+
+//  updatePaddle function
+function updatePaddle() {
+  //  move the paddle
+  let lastPaddleX = paddle.x;
+  paddle.x += (paddle.xV / 1000) * 20;
+
+  //  wall collision detection for paddle
+  if (paddle.x < wall + paddle.w / 2) {
+    paddle.x = wall + paddle.w / 2;
+  } else if (paddle.x > width - wall - paddle.w / 2) {
+    paddle.x = width - wall - paddle.w / 2;
+  }
 }
 
 // The Paddle class
