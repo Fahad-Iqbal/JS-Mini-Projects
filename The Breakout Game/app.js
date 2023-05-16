@@ -6,6 +6,11 @@ const BALL_SPEED = 0.45; // fraction of screen height per second
 const BALL_SPIN = 0.2; // ball deflection of the paddle 0 == no spin, 1 == high spin
 const WALL = 0.02; // wall -ball -paddle as a fraction of the shortest screen dimension
 const MIN_BOUNCE_ANGLE = 30; // min bounce angle from the horizontal in degrees
+const BRICK_ROWS = 8; // starting number or brick rows
+const BRICK_COLS = 14; // original number of brick cols
+const BRICK_GAP = 0.3; // brick gap as a fraction of the wall width
+const MARGIN = 4; /* number of empty rows above the bricks = empty space between the top of the bricks and the score board*/
+const MAX_LEVEL = 10; // max game level (+2 rows of bricks per level)
 
 // colors
 const COLOR_BG = "black";
@@ -30,6 +35,48 @@ let width, height, wall;
 
 // initializing the paddle, ball classes
 let paddle, ball, touchX; // touch location
+let level,
+  bricks = [];
+
+// The Ball class
+class Ball {
+  constructor(ballSize, ballSpeed) {
+    this.w = ballSize;
+    this.h = ballSize;
+    this.x = paddle.x;
+    this.y = paddle.y - paddle.h / 2 - this.h / 2;
+    this.speed = ballSpeed * height;
+    this.xV = 0;
+    this.yV = 0;
+  }
+}
+
+//  The Brick class
+class Brick {
+  constructor(left, top, w, h, color, score, spdMult) {
+    this.w = w;
+    this.h = h;
+    this.left = left;
+    this.top = top;
+    this.bottom = top + h;
+    this.right = left + w;
+    this.color = color;
+    // this.score = score;
+    // this.spdMult = spdMult;
+  }
+}
+
+// The Paddle class
+class Paddle {
+  constructor(paddleWidth, paddleHeight, paddleSpeed) {
+    this.w = paddleWidth * width;
+    this.h = paddleHeight / 2;
+    this.x = canvasEl.width / 2;
+    this.y = canvasEl.height - this.h * 3;
+    this.speed = paddleSpeed * width;
+    this.xV = 0;
+  }
+}
 
 // Touch Events
 canvasEl.addEventListener("touchcancel", touchCancel);
@@ -57,6 +104,7 @@ function playGame() {
   drawWalls();
   drawPaddle();
   drawBall();
+  drawBricks();
 }
 
 // applyBallSpeed function
@@ -71,6 +119,42 @@ function applyBallSpeed(angle) {
   ball.xV = Math.cos(angle) * ball.speed;
   ball.yV = -Math.sin(angle) * ball.speed;
 }
+
+// createBricks function
+function createBricks() {
+  // row dimensions
+  let minY = wall;
+  let maxY = ball.y - ball.h * 3.5;
+  let totalSpaceY = maxY - minY;
+  let totalRows = MARGIN + BRICK_ROWS + MAX_LEVEL * 2;
+  let rowH = (totalSpaceY / totalRows) * 0.9;
+  let gap = wall * BRICK_GAP * 0.9;
+  let h = rowH - gap;
+
+  // col dimensions
+  let totalSpaceX = width - wall * 2;
+  let colW = (totalSpaceX - gap) / BRICK_COLS;
+  let w = colW - gap;
+
+  // resetting the bricks array
+  bricks = [];
+  let cols = BRICK_COLS;
+  let rows = BRICK_ROWS;
+  let color, left, rank, rankHigh, score, spdMult, top;
+
+  rankHigh = rows / 2 - 1;
+  for (let i = 0; i < rows; i++) {
+    bricks[i] = [];
+    rank = Math.floor(i / 2);
+    color = getBrickColor(rank, rankHigh);
+    top = wall + (MARGIN + i) * rowH;
+    for (let j = 0; j < cols; j++) {
+      left = wall + gap + j * colW;
+      bricks[i][j] = new Brick(left, top, w, h, color, score, spdMult);
+    }
+  }
+}
+
 // drawBackground
 function drawBackground() {
   ConX.fillStyle = COLOR_BG;
@@ -81,6 +165,16 @@ function drawBackground() {
 function drawBall() {
   ConX.fillStyle = COLOR_BALL;
   ConX.fillRect(ball.x - ball.w / 2, ball.y - ball.h / 2, ball.w, ball.h);
+}
+
+// drawBricks function
+function drawBricks() {
+  for (let row of bricks) {
+    for (let brick of row) {
+      ConX.fillStyle = brick.color;
+      ConX.fillRect(brick.left, brick.top, brick.w, brick.h);
+    }
+  }
 }
 
 function drawPaddle() {
@@ -104,6 +198,29 @@ function drawWalls() {
   ConX.lineTo(width - halfWall, halfWall);
   ConX.lineTo(width - halfWall, height);
   ConX.stroke();
+}
+
+// getBrickColor function
+function getBrickColor(rank, highestRank) {
+  //  red = 0, orange = 0.33; yellow = 0.67, green = 1
+  let fraction = rank / highestRank;
+  let r,
+    g,
+    b = 0;
+
+  //  red to orange to yellow (increase the green)
+  if (fraction <= 0.67) {
+    r = 266;
+    g = (255 * fraction) / 0.67;
+  }
+
+  // yellow to green (reduce the red)
+  else {
+    r = (255 * (1 - fraction)) / 0.66;
+    g = 255;
+  }
+
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 // Arrow Keys Functions
@@ -149,6 +266,9 @@ function movePaddle(direction) {
 function newGame() {
   paddle = new Paddle(PADDLE_WIDTH, wall, PADDLE_SPEED);
   ball = new Ball(wall, BALL_SPEED);
+
+  level = 0;
+  createBricks();
 }
 
 // setDimensions function
@@ -158,6 +278,8 @@ function setDimensions() {
   wall = WALL * (height < width ? height : width);
   canvasEl.width = width;
   canvasEl.height = height;
+
+  newGame();
 }
 
 // Touch events functions
@@ -231,6 +353,11 @@ function updateBall() {
   if (ball.y > canvasEl.height) {
     outOfBounds();
   }
+
+  // move the ball with the paddle
+  if (ball.yV == 0) {
+    ball.x = paddle.x;
+  }
 }
 
 //  updatePaddle function
@@ -257,31 +384,6 @@ function updatePaddle() {
   }
 }
 
-// The Ball class
-class Ball {
-  constructor(ballSize, ballSpeed) {
-    this.w = ballSize;
-    this.h = ballSize;
-    this.x = paddle.x;
-    this.y = paddle.y - paddle.h / 2 - this.h / 2;
-    this.speed = ballSpeed * height;
-    this.xV = 0;
-    this.yV = 0;
-  }
-}
-
-// The Paddle class
-class Paddle {
-  constructor(paddleWidth, paddleHeight, paddleSpeed) {
-    this.w = paddleWidth * width;
-    this.h = paddleHeight / 2;
-    this.x = canvasEl.width / 2;
-    this.y = canvasEl.height - this.h * 3;
-    this.speed = paddleSpeed * width;
-    this.xV = 0;
-  }
-}
-
 // serveBall function
 function serveBall() {
   // if the ball is already move don't allow serve
@@ -303,5 +405,4 @@ function outOfBounds() {
 }
 
 setDimensions();
-newGame();
 playGame();
