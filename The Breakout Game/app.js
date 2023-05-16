@@ -61,8 +61,22 @@ class Brick {
     this.bottom = top + h;
     this.right = left + w;
     this.color = color;
-    // this.score = score;
-    // this.spdMult = spdMult;
+    this.score = score;
+    this.spdMult = spdMult;
+
+    this.intersect = (ball) => {
+      let ballBottom = ball.y + ball.h * 0.5;
+      let ballLeft = ball.x - ball.w * 0.5;
+      let ballRight = ball.x + ball.w * 0.5;
+      let ballTop = ball.y - ball.h * 0.5;
+
+      return (
+        this.left < ballRight &&
+        ballLeft < this.right &&
+        this.bottom > ballTop &&
+        this.top < ballBottom
+      );
+    };
   }
 }
 
@@ -95,9 +109,6 @@ window.addEventListener("resize", setDimensions);
 
 function playGame() {
   requestAnimationFrame(playGame);
-  // update functions
-  updatePaddle();
-  updateBall();
 
   // draw functions
   drawBackground();
@@ -105,17 +116,14 @@ function playGame() {
   drawPaddle();
   drawBall();
   drawBricks();
+  // update functions
+  updatePaddle();
+  updateBall();
+  updateBricks();
 }
 
 // applyBallSpeed function
 function applyBallSpeed(angle) {
-  //  keeping the angle between two limits = (30 to 150) degrees
-  if (angle < Math.PI / 6) {
-    angle = Math.PI / 6;
-  } else if (angle > (Math.PI * 5) / 6) {
-    angle = (Math.PI * 5) / 6;
-  }
-
   ball.xV = Math.cos(angle) * ball.speed;
   ball.yV = -Math.sin(angle) * ball.speed;
 }
@@ -171,6 +179,9 @@ function drawBall() {
 function drawBricks() {
   for (let row of bricks) {
     for (let brick of row) {
+      if (brick == null) {
+        continue;
+      }
       ConX.fillStyle = brick.color;
       ConX.fillRect(brick.left, brick.top, brick.w, brick.h);
     }
@@ -282,6 +293,32 @@ function setDimensions() {
   newGame();
 }
 
+// spinBall function
+function spinBall() {
+  let upwards = ball.yV < 0;
+  // modify the angle based off the ball spin
+  // find the current angle
+  let angle = Math.atan2(-ball.yV, ball.xV);
+  angle += ((Math.random() * Math.PI) / 2 - Math.PI / 4) * BALL_SPIN;
+
+  let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
+  if (upwards) {
+    if (angle < minBounceAngle) {
+      angle = minBounceAngle;
+    } else if (angle > Math.PI - minBounceAngle) {
+      angle = Math.PI - minBounceAngle;
+    }
+  } else {
+    if (angle > -minBounceAngle) {
+      angle = -minBounceAngle;
+    } else if (angle < -Math.PI + minBounceAngle) {
+      angle = -Math.PI + minBounceAngle;
+    }
+  }
+
+  applyBallSpeed(angle);
+}
+
 // Touch events functions
 
 // function touch(x) {
@@ -321,15 +358,15 @@ function updateBall() {
   if (ball.x < wall + ball.w / 2) {
     ball.x = wall + ball.w / 2;
     ball.xV = -ball.xV;
-    // spinBall();
+    spinBall();
   } else if (ball.x > width - wall - ball.w / 2) {
     ball.x = width - wall - ball.w / 2;
     ball.xV = -ball.xV;
-    // spinBall();
+    spinBall();
   } else if (ball.y < wall + ball.h / 2) {
     ball.y = wall + ball.h / 2;
     ball.yV = -ball.yV;
-    // spinBall();
+    spinBall();
   }
 
   // bouncing the ball of the paddle
@@ -341,12 +378,10 @@ function updateBall() {
   ) {
     ball.y = paddle.y - paddle.h / 2 - ball.h / 2;
     ball.yV = -ball.yV;
-    // modify the angle based off the ball spin
-    // find the current angle
 
-    let angle = Math.atan2(-ball.yV, ball.xV);
-    angle += ((Math.random() * Math.PI) / 2 - Math.PI / 4) * BALL_SPIN;
-    applyBallSpeed(angle);
+    // applyBallSpeed(angle);
+
+    spinBall();
   }
 
   //  ball moves out of the canvas
@@ -357,6 +392,29 @@ function updateBall() {
   // move the ball with the paddle
   if (ball.yV == 0) {
     ball.x = paddle.x;
+  }
+}
+
+// updateBricks function
+function updateBricks() {
+  // check for ball collision
+  OUTER: for (let i = 0; i < bricks.length; i++) {
+    for (let j = 0; j < BRICK_COLS; j++) {
+      if (bricks[i][j]?.intersect(ball)) {
+        if (ball.yV < 0) {
+          // upwards
+          ball.y = bricks[i][j].bottom + ball.h / 2;
+        }
+        // downwards
+        else {
+          ball.y = bricks[i][j].top - ball.h / 2;
+        }
+        bricks[i][j] = null;
+        ball.yV = -ball.yV;
+        spinBall();
+        break OUTER;
+      }
+    }
   }
 }
 
