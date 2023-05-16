@@ -2,7 +2,7 @@
 
 const PADDLE_WIDTH = 0.1; // as a fraction of the screen width
 const PADDLE_SPEED = 0.5; // fraction of screen width per second -> it will cross 50% of the screen in 1s
-const BALL_SPEED = 0.45; // fraction of screen height per second
+const BALL_SPEED = 1; // fraction of screen height per second
 const BALL_SPIN = 0.2; // ball deflection of the paddle 0 == no spin, 1 == high spin
 const WALL = 0.02; // wall -ball -paddle as a fraction of the shortest screen dimension
 const MIN_BOUNCE_ANGLE = 30; // min bounce angle from the horizontal in degrees
@@ -13,6 +13,7 @@ const MARGIN = 4; /* number of empty rows above the bricks = empty space between
 const MAX_LEVEL = 10; // max game level (+2 rows of bricks per level)
 const GAME_LIVES = 3;
 const KEY_SCORE = "HighScore";
+const BALL_SPEED_MAX = 2; // multiple of starting speed
 
 // colors
 const COLOR_BG = "black";
@@ -64,6 +65,10 @@ class Ball {
     this.xV = 0;
     this.yV = 0;
   }
+
+  setSpeed = (spdMult) => {
+    this.speed = Math.max(this.speed, BALL_SPEED * height * spdMult);
+  };
 }
 
 //  The Brick class
@@ -125,6 +130,13 @@ window.addEventListener("resize", setDimensions);
 function playGame() {
   requestAnimationFrame(playGame);
 
+  if (!gameOver) {
+    // update functions
+    updatePaddle();
+    updateBall();
+    updateBricks();
+  }
+
   // draw functions
   drawBackground();
   drawWalls();
@@ -132,10 +144,6 @@ function playGame() {
   drawBall();
   drawBricks();
   drawText();
-  // update functions
-  updatePaddle();
-  updateBall();
-  updateBricks();
 }
 
 // applyBallSpeed function
@@ -166,8 +174,10 @@ function createBricks() {
   // resetting the bricks array
   bricks = [];
   let cols = BRICK_COLS;
-  let rows = BRICK_ROWS;
+  let rows = BRICK_ROWS + level * 2;
   let color, left, rank, rankHigh, score, spdMult, top;
+
+  numBricks = cols * rows;
 
   rankHigh = rows / 2 - 1;
   for (let i = 0; i < rows; i++) {
@@ -175,6 +185,16 @@ function createBricks() {
     rank = Math.floor(i / 2);
     score = (rankHigh - rank) * 2 + 1;
     color = getBrickColor(rank, rankHigh);
+
+    /*
+    red rank = 0
+    orange rank = 1
+    yellow rank = 2
+    green rank = 3
+     
+    rankHigh = 3
+    */
+    spdMult = 1 + ((rankHigh - rank) / rankHigh) * (BALL_SPEED_MAX - 1);
     top = wall + (MARGIN + i) * rowH;
     for (let j = 0; j < cols; j++) {
       left = wall + gap + j * colW;
@@ -256,6 +276,13 @@ function drawText() {
   ConX.fillText(level, x3, yValue, maxWidth3);
   ConX.textAlign = "right";
   ConX.fillText(scoreHigh, x4, yValue, maxWidth4);
+
+  if (gameOver) {
+    let text = win ? TEXT_WIN : TEXT_GAME_OVER;
+    ConX.font = `${textSize * 2}px ${TEXT_FONT}`;
+    ConX.textAlign = "center";
+    ConX.fillText(text, width / 2, paddle.y - textSize * 2, maxWidth);
+  }
 }
 
 // drawWalls function
@@ -299,6 +326,9 @@ function keyDown(e) {
   switch (e.keyCode) {
     case 32: // serve the ball
       serveBall();
+      if (gameOver) {
+        newGame();
+      }
       break;
     case 37:
       movePaddle(DIRECTION.LEFT);
@@ -450,6 +480,9 @@ function touchMove(e) {
 }
 function touchStart(e) {
   if (serveBall()) {
+    if (gameOver) {
+      newGame();
+    }
     return;
   }
   touchX = e.touches[0].clientX;
@@ -509,6 +542,7 @@ function updateBricks() {
     for (let j = 0; j < BRICK_COLS; j++) {
       if (bricks[i][j]?.intersect(ball)) {
         updateScore(bricks[i][j].score);
+        ball.setSpeed(bricks[i][j].spdMult);
         if (ball.yV < 0) {
           // upwards
           ball.y = bricks[i][j].bottom + ball.h / 2;
@@ -519,9 +553,22 @@ function updateBricks() {
         }
         bricks[i][j] = null;
         ball.yV = -ball.yV;
+        numBricks--;
         spinBall();
         break OUTER;
       }
+    }
+  }
+
+  // test for the next level
+  if (numBricks == 0) {
+    if (level < MAX_LEVEL) {
+      level++;
+      newLevel();
+    } else {
+      gameOver = true;
+      win = true;
+      newBall();
     }
   }
 }
