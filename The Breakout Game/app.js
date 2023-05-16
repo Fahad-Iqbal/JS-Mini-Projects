@@ -11,12 +11,24 @@ const BRICK_COLS = 14; // original number of brick cols
 const BRICK_GAP = 0.3; // brick gap as a fraction of the wall width
 const MARGIN = 4; /* number of empty rows above the bricks = empty space between the top of the bricks and the score board*/
 const MAX_LEVEL = 10; // max game level (+2 rows of bricks per level)
+const GAME_LIVES = 3;
+const KEY_SCORE = "HighScore";
 
 // colors
 const COLOR_BG = "black";
 const COLOR_WALL = "grey";
 const COLOR_PADDLE = "white";
 const COLOR_BALL = "white";
+const COLOR_TEXT = "white";
+
+// Text properties
+const TEXT_FONT = "sans-serif";
+const TEXT_LEVEL = "Level";
+const TEXT_LIVES = "Ball";
+const TEXT_SCORE = "Score";
+const TEXT_HIGH_SCORE = "BEST";
+const TEXT_GAME_OVER = "GAME OVER";
+const TEXT_WIN = "YOU WON";
 
 // Directions
 const DIRECTION = {
@@ -34,9 +46,12 @@ const ConX = canvasEl.getContext("2d");
 let width, height, wall;
 
 // initializing the paddle, ball classes
-let paddle, ball, touchX; // touch location
-let level,
-  bricks = [];
+let paddle, ball; // touch location
+let bricks = [];
+
+let gameOver, pupExtension, pupSticky, pupSuper, win;
+let level, lives, score, scoreHigh;
+let numBricks, textSize, touchX;
 
 // The Ball class
 class Ball {
@@ -116,6 +131,7 @@ function playGame() {
   drawPaddle();
   drawBall();
   drawBricks();
+  drawText();
   // update functions
   updatePaddle();
   updateBall();
@@ -139,6 +155,9 @@ function createBricks() {
   let gap = wall * BRICK_GAP * 0.9;
   let h = rowH - gap;
 
+  // Text Size
+  textSize = rowH * MARGIN * 0.45;
+
   // col dimensions
   let totalSpaceX = width - wall * 2;
   let colW = (totalSpaceX - gap) / BRICK_COLS;
@@ -154,6 +173,7 @@ function createBricks() {
   for (let i = 0; i < rows; i++) {
     bricks[i] = [];
     rank = Math.floor(i / 2);
+    score = (rankHigh - rank) * 2 + 1;
     color = getBrickColor(rank, rankHigh);
     top = wall + (MARGIN + i) * rowH;
     for (let j = 0; j < cols; j++) {
@@ -196,6 +216,46 @@ function drawPaddle() {
     paddle.w,
     paddle.h
   );
+}
+
+// drawText function
+function drawText() {
+  ConX.fillStyle = COLOR_TEXT;
+
+  // Dimensions
+  let labelSize = textSize * 0.5;
+  let margin = wall * 2;
+  let maxWidth = width - margin * 2;
+  let maxWidth1 = maxWidth * 0.27; // width of col of text 1;
+  let maxWidth2 = maxWidth * 0.2; // width of col of text 2;
+  let maxWidth3 = maxWidth * 0.2; // width of col of text 3;
+  let maxWidth4 = maxWidth * 0.27; // width of col of text 4;
+  let x1 = margin; // position of the col 1
+  let x2 = width * 0.4; // position of the col 2
+  let x3 = width * 0.6; // position of the col 3
+  let x4 = width - margin; // position of the col 4
+  let yLabel = wall + labelSize;
+  let yValue = yLabel + textSize * 0.9;
+
+  // Drawing Labels
+  ConX.font = `${labelSize}px ${TEXT_FONT}`;
+  ConX.textAlign = "left";
+  ConX.fillText(TEXT_SCORE, x1, yLabel, maxWidth1);
+  ConX.textAlign = "center";
+  ConX.fillText(TEXT_LIVES, x2, yLabel, maxWidth2);
+  ConX.fillText(TEXT_LEVEL, x3, yLabel, maxWidth3);
+  ConX.textAlign = "right";
+  ConX.fillText(TEXT_HIGH_SCORE, x4, yLabel, maxWidth4);
+
+  // Drawing the values
+  ConX.font = `${textSize}px ${TEXT_FONT}`;
+  ConX.textAlign = "left";
+  ConX.fillText(score, x1, yValue, maxWidth1);
+  ConX.textAlign = "center";
+  ConX.fillText(`${lives}/${GAME_LIVES}`, x2, yValue, maxWidth2);
+  ConX.fillText(level, x3, yValue, maxWidth3);
+  ConX.textAlign = "right";
+  ConX.fillText(scoreHigh, x4, yValue, maxWidth4);
 }
 
 // drawWalls function
@@ -273,13 +333,59 @@ function movePaddle(direction) {
   }
 }
 
-// newGame function
-function newGame() {
+// newBall function()
+function newBall() {
   paddle = new Paddle(PADDLE_WIDTH, wall, PADDLE_SPEED);
   ball = new Ball(wall, BALL_SPEED);
+}
 
+// newGame function
+function newGame() {
   level = 0;
+  gameOver = false;
+  score = 0;
+  win = false;
+  lives = GAME_LIVES;
+
+  // getting the highscore from the localStorage
+  let scoreStr = localStorage.getItem(KEY_SCORE);
+  if (scoreStr == null) {
+    scoreHigh = 0;
+  } else {
+    scoreHigh = parseInt(scoreStr);
+  }
+  newLevel();
+}
+
+// newLevel function
+function newLevel() {
+  touchX = null;
+  newBall();
   createBricks();
+}
+
+// outOfBounds function
+function outOfBounds() {
+  lives--;
+  if (lives == 0) {
+    gameOver = true;
+  }
+  newBall();
+}
+
+// serveBall function
+function serveBall() {
+  // if the ball is already move don't allow serve
+  if (ball.yV != 0) {
+    return false;
+  }
+
+  // random angle, not less than the min bounce angle
+  let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
+  let range = Math.PI - minBounceAngle * 2;
+  let angle = Math.random() * range + minBounceAngle;
+  applyBallSpeed(angle);
+  return true;
 }
 
 // setDimensions function
@@ -290,6 +396,7 @@ function setDimensions() {
   canvasEl.width = width;
   canvasEl.height = height;
 
+  ConX.textBaseline = "middle";
   newGame();
 }
 
@@ -401,6 +508,7 @@ function updateBricks() {
   OUTER: for (let i = 0; i < bricks.length; i++) {
     for (let j = 0; j < BRICK_COLS; j++) {
       if (bricks[i][j]?.intersect(ball)) {
+        updateScore(bricks[i][j].score);
         if (ball.yV < 0) {
           // upwards
           ball.y = bricks[i][j].bottom + ball.h / 2;
@@ -442,24 +550,15 @@ function updatePaddle() {
   }
 }
 
-// serveBall function
-function serveBall() {
-  // if the ball is already move don't allow serve
-  if (ball.yV != 0) {
-    return false;
+// updateScore function
+function updateScore(brickScore) {
+  score += brickScore;
+
+  // check for a high score
+  if (score > scoreHigh) {
+    scoreHigh = score;
+    localStorage.setItem(KEY_SCORE, scoreHigh);
   }
-
-  // random angle, not less than the min bounce angle
-  let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
-  let range = Math.PI - minBounceAngle * 2;
-  let angle = Math.random() * range + minBounceAngle;
-  applyBallSpeed(angle);
-  return true;
-}
-
-// outOfBounds function
-function outOfBounds() {
-  newGame();
 }
 
 setDimensions();
