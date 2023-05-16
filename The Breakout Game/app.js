@@ -2,7 +2,7 @@
 
 const PADDLE_WIDTH = 0.1; // as a fraction of the screen width
 const PADDLE_SPEED = 0.5; // fraction of screen width per second -> it will cross 50% of the screen in 1s
-const BALL_SPEED = 1; // fraction of screen height per second
+const BALL_SPEED = 0.45; // fraction of screen height per second
 const BALL_SPIN = 0.2; // ball deflection of the paddle 0 == no spin, 1 == high spin
 const WALL = 0.02; // wall -ball -paddle as a fraction of the shortest screen dimension
 const MIN_BOUNCE_ANGLE = 30; // min bounce angle from the horizontal in degrees
@@ -42,6 +42,11 @@ const DIRECTION = {
 let canvasEl = document.createElement("canvas");
 document.body.appendChild(canvasEl);
 const ConX = canvasEl.getContext("2d");
+
+let audBrick = new Audio("sounds/brick.m4a");
+let audPaddle = new Audio("sounds/paddle.m4a");
+let audPowerup = new Audio("sounds/powerup.m4a");
+let audWall = new Audio("sounds/wall.m4a");
 
 // Dimensions
 let width, height, wall;
@@ -411,6 +416,7 @@ function serveBall() {
   }
 
   // random angle, not less than the min bounce angle
+  audPaddle.play();
   let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
   let range = Math.PI - minBounceAngle * 2;
   let angle = Math.random() * range + minBounceAngle;
@@ -498,12 +504,15 @@ function updateBall() {
   if (ball.x < wall + ball.w / 2) {
     ball.x = wall + ball.w / 2;
     ball.xV = -ball.xV;
+    audWall.play();
     spinBall();
   } else if (ball.x > width - wall - ball.w / 2) {
+    audWall.play();
     ball.x = width - wall - ball.w / 2;
     ball.xV = -ball.xV;
     spinBall();
   } else if (ball.y < wall + ball.h / 2) {
+    audWall.play();
     ball.y = wall + ball.h / 2;
     ball.yV = -ball.yV;
     spinBall();
@@ -516,10 +525,9 @@ function updateBall() {
     ball.x > paddle.x - paddle.w / 2 - ball.w / 2 &&
     ball.x < paddle.x + paddle.w / 2 + ball.w / 2
   ) {
+    audPaddle.play();
     ball.y = paddle.y - paddle.h / 2 - ball.h / 2;
     ball.yV = -ball.yV;
-
-    // applyBallSpeed(angle);
 
     spinBall();
   }
@@ -541,6 +549,7 @@ function updateBricks() {
   OUTER: for (let i = 0; i < bricks.length; i++) {
     for (let j = 0; j < BRICK_COLS; j++) {
       if (bricks[i][j]?.intersect(ball)) {
+        audBrick.play();
         updateScore(bricks[i][j].score);
         ball.setSpeed(bricks[i][j].spdMult);
         if (ball.yV < 0) {
