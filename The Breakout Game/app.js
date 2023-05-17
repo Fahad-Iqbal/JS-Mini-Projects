@@ -14,6 +14,9 @@ const MAX_LEVEL = 10; // max game level (+2 rows of bricks per level)
 const GAME_LIVES = 3;
 const KEY_SCORE = "HighScore";
 const BALL_SPEED_MAX = 2; // multiple of starting speed
+const PUP_CHANCE = 1; // probability of a powerup per brick hit (between -> 0 - 1)
+const PUP_SPEED = 0.15;
+const PUP_BONUS = 50;
 
 // colors
 const COLOR_BG = "black";
@@ -38,6 +41,13 @@ const DIRECTION = {
   STOP: 2,
 };
 
+const PupType = {
+  EXTENSION: { color: "white", symbol: "=" },
+  LIFE: { color: "coral", symbol: "+" },
+  STICKY: { color: "lightseagreen", symbol: "~" },
+  SUPER: { color: "hotpink", symbol: "s" },
+};
+
 // Setting up the canvas and context
 let canvasEl = document.createElement("canvas");
 document.body.appendChild(canvasEl);
@@ -52,8 +62,10 @@ let audWall = new Audio("sounds/wall.m4a");
 let width, height, wall;
 
 // initializing the paddle, ball classes
-let paddle, ball; // touch location
-let bricks = [];
+let paddle,
+  ball,
+  bricks = [],
+  pups = [];
 
 let gameOver, pupExtension, pupSticky, pupSuper, win;
 let level, lives, score, scoreHigh;
@@ -117,6 +129,18 @@ class Paddle {
   }
 }
 
+// The PowerUp class
+class PowerUp {
+  constructor(x, y, size, type) {
+    this.w = size;
+    this.h = size;
+    this.x = x;
+    this.y = y;
+    this.type = type;
+    this.yV = PUP_SPEED * height;
+  }
+}
+
 // Touch Events
 canvasEl.addEventListener("touchcancel", touchCancel);
 canvasEl.addEventListener("touchend", touchEnd);
@@ -140,11 +164,13 @@ function playGame() {
     updatePaddle();
     updateBall();
     updateBricks();
+    updatePups();
   }
 
   // draw functions
   drawBackground();
   drawWalls();
+  drawPups();
   drawPaddle();
   drawBall();
   drawBricks();
@@ -241,6 +267,19 @@ function drawPaddle() {
     paddle.w,
     paddle.h
   );
+}
+
+// drawPups function
+function drawPups() {
+  ConX.lineWidth = wall * 0.4;
+  for (let pup of pups) {
+    ConX.fillStyle = pup.type.color;
+    ConX.strokeStyle = pup.type.color;
+    ConX.strokeRect(pup.x - pup.w / 2, pup.y - pup.h / 2, pup.w, pup.h);
+    ConX.font = `bold ${pup.h}px ${TEXT_FONT}`;
+    ConX.textAlign = "center";
+    ConX.fillText(pup.type.symbol, pup.x, pup.y);
+  }
 }
 
 // drawText function
@@ -370,6 +409,10 @@ function movePaddle(direction) {
 
 // newBall function()
 function newBall() {
+  // resetting the powerups
+  pupExtension = false;
+  pupSticky = false;
+  pupSuper = false;
   paddle = new Paddle(PADDLE_WIDTH, wall, PADDLE_SPEED);
   ball = new Ball(wall, BALL_SPEED);
 }
@@ -394,6 +437,9 @@ function newGame() {
 
 // newLevel function
 function newLevel() {
+  // reset the pups to an empty array
+  pups = [];
+
   touchX = null;
   newBall();
   createBricks();
@@ -560,6 +606,17 @@ function updateBricks() {
         else {
           ball.y = bricks[i][j].top - ball.h / 2;
         }
+
+        // creating a pup
+        if (Math.random() <= PUP_CHANCE) {
+          let px = bricks[i][j].left + bricks[i][j].w / 2;
+          let py = bricks[i][j].top + bricks[i][j].h / 2;
+          let pSize = bricks[i][j].w * 0.4;
+          let pKeys = Object.keys(PupType);
+          let pKey = pKeys[Math.floor(Math.random() * pKeys.length)];
+          pups.push(new PowerUp(px, py, pSize, PupType[pKey]));
+        }
+
         bricks[i][j] = null;
         ball.yV = -ball.yV;
         numBricks--;
@@ -603,6 +660,18 @@ function updatePaddle() {
     paddle.x = wall + paddle.w / 2;
   } else if (paddle.x > width - wall - paddle.w / 2) {
     paddle.x = width - wall - paddle.w / 2;
+  }
+}
+
+// updatePups function
+function updatePups() {
+  for (let i = pups.length - 1; i >= 0; i--) {
+    pups[i].y += (pups[i].yV / 1000) * 20;
+
+    // delete pups when they go off screen
+    if (pups[i].y - pups[i].h * 0.5 > height) {
+      pups.splice(i, 1);
+    }
   }
 }
 
