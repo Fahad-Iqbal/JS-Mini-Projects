@@ -14,7 +14,7 @@ const MAX_LEVEL = 10; // max game level (+2 rows of bricks per level)
 const GAME_LIVES = 3;
 const KEY_SCORE = "HighScore";
 const BALL_SPEED_MAX = 2; // multiple of starting speed
-const PUP_CHANCE = 1; // probability of a powerup per brick hit (between -> 0 - 1)
+const PUP_CHANCE = 0.1; // probability of a powerup per brick hit (between -> 0 - 1)
 const PUP_SPEED = 0.15;
 const PUP_BONUS = 50;
 
@@ -242,7 +242,7 @@ function drawBackground() {
 
 // drawBall function
 function drawBall() {
-  ConX.fillStyle = COLOR_BALL;
+  ConX.fillStyle = pupSuper ? PupType.SUPER.color : COLOR_BALL;
   ConX.fillRect(ball.x - ball.w / 2, ball.y - ball.h / 2, ball.w, ball.h);
 }
 
@@ -260,7 +260,7 @@ function drawBricks() {
 }
 
 function drawPaddle() {
-  ConX.fillStyle = COLOR_PADDLE;
+  ConX.fillStyle = pupSticky ? PupType.STICKY.color : COLOR_PADDLE;
   ConX.fillRect(
     paddle.x - paddle.w / 2,
     paddle.y - paddle.h / 2,
@@ -466,7 +466,7 @@ function serveBall() {
   let minBounceAngle = (MIN_BOUNCE_ANGLE / 180) * Math.PI;
   let range = Math.PI - minBounceAngle * 2;
   let angle = Math.random() * range + minBounceAngle;
-  applyBallSpeed(angle);
+  applyBallSpeed(pupSticky ? Math.PI / 2 : angle);
   return true;
 }
 
@@ -573,19 +573,23 @@ function updateBall() {
   ) {
     audPaddle.play();
     ball.y = paddle.y - paddle.h / 2 - ball.h / 2;
-    ball.yV = -ball.yV;
 
     spinBall();
+
+    // make the ball stick to paddle
+    if (pupSticky) {
+      ball.xV = 0;
+      ball.yV = 0;
+    } else {
+      ball.yV = -ball.yV;
+
+      spinBall();
+    }
   }
 
   //  ball moves out of the canvas
   if (ball.y > canvasEl.height) {
     outOfBounds();
-  }
-
-  // move the ball with the paddle
-  if (ball.yV == 0) {
-    ball.x = paddle.x;
   }
 }
 
@@ -618,7 +622,7 @@ function updateBricks() {
         }
 
         bricks[i][j] = null;
-        ball.yV = -ball.yV;
+        ball.yV = pupSuper ? ball.yV : -ball.yV;
         numBricks--;
         spinBall();
         break OUTER;
@@ -660,6 +664,58 @@ function updatePaddle() {
     paddle.x = wall + paddle.w / 2;
   } else if (paddle.x > width - wall - paddle.w / 2) {
     paddle.x = width - wall - paddle.w / 2;
+  }
+
+  // move the ball with the paddle
+  if (ball.yV == 0) {
+    ball.x += paddle.x - lastPaddleX;
+  }
+
+  // collecting the PUPS
+  for (let i = pups.length - 1; i >= 0; i--) {
+    if (
+      pups[i].x + pups[i].w / 2 > paddle.x - paddle.w * 0.5 &&
+      pups[i].x - pups[i].w / 2 < paddle.x + paddle.w / 2 &&
+      pups[i].y + pups[i].h / 2 > paddle.y - paddle.h * 0.5 &&
+      pups[i].y - pups[i].h / 2 < paddle.y + paddle.h / 2
+    ) {
+      switch (pups[i].type) {
+        case PupType.EXTENSION:
+          // double the width of the paddle
+          if (pupExtension) {
+            score += PUP_BONUS;
+          } else {
+            pupExtension = true;
+            paddle.w *= 2;
+          }
+          break;
+
+        case PupType.LIFE:
+          // add a life
+          lives++;
+          break;
+
+        case PupType.STICKY:
+          // make paddle sticky
+          if (pupSticky) {
+            score += PUP_BONUS;
+          } else {
+            pupSticky = true;
+          }
+          break;
+
+        case PupType.SUPER:
+          // super shots
+          if (pupSuper) {
+            score += PUP_BONUS;
+          } else {
+            pupSuper = true;
+          }
+          break;
+      }
+      pups.splice(i, 1);
+      audPowerup.play();
+    }
   }
 }
 
