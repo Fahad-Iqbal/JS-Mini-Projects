@@ -21,6 +21,16 @@ const COLOR_PLAYER = "lawngreen";
 const COLOR_PLAYER_LIGHT = "rgba(126, 252, 0, 0.3";
 const COLOR_TIE = "white";
 
+// Text variables
+const TEXT_AI = "Player2";
+const TEXT_AI_SML = "P2";
+const TEXT_PLAYER = "Player1";
+const TEXT_PLAYER_SML = "P1";
+const TEXT_SIZE_CELL = CELL / 2.5;
+const TEXT_SIZE_TOP = MARGIN / 6;
+const TEXT_TIE = "Draw";
+const TEXT_WIN = "Won";
+
 // Side Object
 const Side = {
   BOTTOM: 0,
@@ -44,6 +54,8 @@ conX.textBaseline = "middle";
 
 // Game Variables
 let currentCells, playersTurn, squares;
+
+let scoreAI, scoreRI;
 
 let timeEnd;
 
@@ -75,7 +87,29 @@ class Square {
     return x >= this.left && x < this.right && y >= this.top && y < this.bottom;
   };
 
-  drawFill = () => {};
+  drawFill = () => {
+    if (this.owner == null) {
+      return;
+    }
+
+    // draw a light background
+    conX.fillStyle = getColor(this.owner, true);
+    conX.fillRect(
+      this.left + STROKE,
+      this.top + STROKE,
+      this.w - STROKE * 2,
+      this.h - STROKE * 2
+    );
+
+    // owner text
+    drawText(
+      getText(this.owner, true),
+      this.left + this.w / 2,
+      this.top + this.h / 2,
+      getColor(this.owner, false),
+      TEXT_SIZE_CELL
+    );
+  };
 
   drawSide = (side, color) => {
     switch (side) {
@@ -158,6 +192,23 @@ class Square {
         this.sideTop.selected = true;
         break;
     }
+
+    this.highlight = null;
+
+    this.numSelected++;
+    if (this.numSelected == 4) {
+      this.owner = playersTurn;
+
+      // handle score
+      if (playersTurn) {
+        scoreRI++;
+      } else {
+        scoreAI++;
+      }
+
+      return true;
+    }
+    return false;
   };
 }
 
@@ -167,6 +218,7 @@ function playGame() {
   drawBoard();
   drawSquares();
   drawGrid();
+  drawScores();
 }
 
 // click function
@@ -217,6 +269,16 @@ function drawLine(x0, y0, x1, y1, color) {
   conX.stroke();
 }
 
+// drawScores function
+function drawScores() {
+  let colorAI = playersTurn ? COLOR_AI_LIGHT : COLOR_AI;
+  let colorRI = playersTurn ? COLOR_PLAYER : COLOR_PLAYER_LIGHT;
+  drawText(TEXT_PLAYER, WIDTH * 0.25, MARGIN * 0.25, colorRI, TEXT_SIZE_TOP);
+  drawText(scoreRI, WIDTH * 0.25, MARGIN * 0.6, colorRI, TEXT_SIZE_TOP * 2);
+  drawText(TEXT_AI, WIDTH * 0.75, MARGIN * 0.25, colorAI, TEXT_SIZE_TOP);
+  drawText(scoreAI, WIDTH * 0.75, MARGIN * 0.6, colorAI, TEXT_SIZE_TOP * 2);
+}
+
 // drawSquares function
 function drawSquares() {
   for (let row of squares) {
@@ -225,6 +287,13 @@ function drawSquares() {
       square.drawFill();
     }
   }
+}
+
+// drawText function
+function drawText(text, x, y, color, size) {
+  conX.fillStyle = color;
+  conX.font = `${size}px sans-serif`;
+  conX.fillText(text, x, y);
 }
 
 // getColor function
@@ -244,6 +313,15 @@ function getGridX(col) {
 // getGridY function
 function getGridY(row) {
   return MARGIN + CELL * row;
+}
+
+// getText function
+function getText(player, small) {
+  if (player) {
+    return small ? TEXT_PLAYER_SML : TEXT_PLAYER;
+  } else {
+    return small ? TEXT_AI_SML : TEXT_AI;
+  }
 }
 
 // highlightGrid function
@@ -324,6 +402,9 @@ function newGame() {
   currentCells = [];
   playersTurn = Math.random() >= 0.5;
 
+  scoreAI = 0;
+  scoreRI = 0;
+
   // set up the squares array
   squares = [];
   for (let i = 0; i < GRID_SIZE; i++) {
@@ -341,12 +422,21 @@ function selectSide() {
   }
 
   // select side
+
+  let filledSquare = false;
   for (let cell of currentCells) {
-    squares[cell.row][cell.col].selectSide();
+    if (squares[cell.row][cell.col].selectSide()) {
+      filledSquare = true;
+    }
   }
   currentCells = [];
 
-  playersTurn = !playersTurn;
+  if (filledSquare) {
+    // handle game over
+  } else {
+    // switch player
+    playersTurn = !playersTurn;
+  }
 }
 
 newGame();
