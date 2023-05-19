@@ -277,6 +277,27 @@ function drawScores() {
   drawText(scoreRI, WIDTH * 0.25, MARGIN * 0.6, colorRI, TEXT_SIZE_TOP * 2);
   drawText(TEXT_AI, WIDTH * 0.75, MARGIN * 0.25, colorAI, TEXT_SIZE_TOP);
   drawText(scoreAI, WIDTH * 0.75, MARGIN * 0.6, colorAI, TEXT_SIZE_TOP * 2);
+
+  // game over text
+  if (timeEnd > 0) {
+    timeEnd--;
+
+    // handle a tie
+    if (scoreRI == scoreAI) {
+      drawText(TEXT_TIE, WIDTH * 0.5, MARGIN * 0.6, COLOR_TIE, TEXT_SIZE_TOP);
+    } else {
+      let playerWins = scoreRI > scoreAI;
+      let color = playerWins ? COLOR_PLAYER : COLOR_AI;
+      let text = playerWins ? TEXT_PLAYER : TEXT_AI;
+      drawText(text, WIDTH * 0.5, MARGIN * 0.5, color, TEXT_SIZE_TOP);
+      drawText(TEXT_WIN, WIDTH * 0.5, MARGIN * 0.7, color, TEXT_SIZE_TOP);
+    }
+
+    // start a new game
+    if (timeEnd == 0) {
+      newGame();
+    }
+  }
 }
 
 // drawSquares function
@@ -405,6 +426,8 @@ function newGame() {
   scoreAI = 0;
   scoreRI = 0;
 
+  timeEnd = 0;
+
   // set up the squares array
   squares = [];
   for (let i = 0; i < GRID_SIZE; i++) {
@@ -433,6 +456,9 @@ function selectSide() {
 
   if (filledSquare) {
     // handle game over
+    if (scoreRI + scoreAI === GRID_SIZE * GRID_SIZE) {
+      timeEnd = Math.ceil(DELAY_END * FPS);
+    }
   } else {
     // switch player
     playersTurn = !playersTurn;
