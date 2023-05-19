@@ -71,6 +71,7 @@ function playGame() {
   drawSquares();
   drawGrid();
   drawScores();
+  AI();
 }
 
 function click(e) {
@@ -186,6 +187,40 @@ function getGridY(row) {
   return MARGIN + CELL * row;
 }
 
+// getValidNeighbourSides function
+function getValidNeighbourSides(row, col) {
+  let sides = [];
+  let square = squares[row][col];
+
+  // checking the bottom hand side if it is not selected already
+  if (!square.sideBottom.selected) {
+    if (row == squares.length - 1 || squares[row + 1][col].numSelected < 2) {
+      sides.push(Side.BOTTOM);
+    }
+  }
+
+  // checking the left hand side if it is not selected already
+  if (!square.sideLeft.selected) {
+    if (col == 0 || squares[row][col - 1].numSelected < 2) {
+      sides.push(Side.LEFT);
+    }
+  }
+  // checking the right hand side if it is not selected already
+  if (!square.sideRight.selected) {
+    if (col == squares[0].length - 1 || squares[row][col + 1].numSelected < 2) {
+      sides.push(Side.RIGHT);
+    }
+  }
+  // checking the top hand side if it is not selected already
+  if (!square.sideTop.selected) {
+    if (row == 0 || squares[row - 1][col].numSelected < 2) {
+      sides.push(Side.TOP);
+    }
+  }
+
+  return sides;
+}
+
 // AI function
 function AI() {
   if (playersTurn || timeEnd > 0) {
@@ -197,8 +232,8 @@ function AI() {
   if (timeAI > 0) {
     timeAI--;
     if (timeAI == 0) {
-      // selectSide()
-      playersTurn = !playersTurn;
+      selectSide();
+      // playersTurn = !playersTurn;
     }
     return;
   }
@@ -221,16 +256,19 @@ function AI() {
     for (let j = 0; j < squares[0].length; j++) {
       switch (squares[i][j].numSelected) {
         case 3: //first priority
-          options[0].push(squares[i][j]);
+          options[0].push({ square: squares[i][j], sides: [] });
           break;
 
         case 0: // second priority
         case 1: // second priority
-          options[1].push(squares[i][j]);
+          let sides = getValidNeighbourSides(i, j);
+          let priority = sides.length > 0 ? 1 : 2;
+
+          options[priority].push({ square: squares[i][j], sides: sides });
           break;
 
         case 2: // third priority
-          options[2].push(squares[i][j]);
+          options[2].push({ square: squares[i][j], sides: [] });
           break;
       }
     }
@@ -246,8 +284,13 @@ function AI() {
     option = options[2][Math.floor(Math.random() * options[2].length)];
   }
 
+  let side = null;
+  if (option.sides.length > 0) {
+    side = option.sides[Math.floor(Math.random() * option.sides.length)];
+  }
+
   // getting the squares coordinates
-  let coordinates = option.getFreeSideCoordinates();
+  let coordinates = option.square.getFreeSideCoordinates(side);
   highlightSide(coordinates.x, coordinates.y);
 
   //  set up the delay
@@ -459,12 +502,53 @@ class Square {
     }
   };
 
-  getFreeSideCoordinates = () => {
+  getFreeSideCoordinates = (side) => {
     // valid coordinates for each of the sides
     let coordinatesBottom = { x: this.left + this.w / 2, y: this.bottom - 1 };
     let coordinatesLeft = { x: this.left, y: this.top + this.h / 2 };
     let coordinatesRight = { x: this.right - 1, y: this.top + this.h / 2 };
     let coordinatesTop = { x: this.left + this.w / 2, y: this.top };
+
+    // get coordinates of each side
+    let coordinates = null;
+    switch (side) {
+      case Side.BOTTOM:
+        coordinates = coordinatesBottom;
+        break;
+
+      case Side.LEFT:
+        coordinates = coordinatesLeft;
+        break;
+
+      case Side.RIGHT:
+        coordinates = coordinatesRight;
+        break;
+
+      case Side.TOP:
+        coordinates = coordinatesTop;
+        break;
+    }
+
+    if (coordinates != null) {
+      return coordinates;
+    }
+
+    // otherwise choosing from a random free side
+    let freeCoordinates = [];
+    if (!this.sideBottom.selected) {
+      freeCoordinates.push(coordinatesBottom);
+    }
+    if (!this.sideTop.selected) {
+      freeCoordinates.push(coordinatesTop);
+    }
+    if (!this.sideLeft.selected) {
+      freeCoordinates.push(coordinatesLeft);
+    }
+    if (!this.sideRight.selected) {
+      freeCoordinates.push(coordinatesRight);
+    }
+
+    return freeCoordinates[Math.floor(Math.random() * freeCoordinates.length)];
   };
 
   highlightSide = (x, y) => {
