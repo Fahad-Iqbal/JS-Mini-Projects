@@ -3,6 +3,7 @@ const HEIGHT = 750;
 const GRID_SIZE = 5;
 const DELAY_END = 2;
 const FPS = 60;
+const DELAY_AI = 1;
 
 // Derived Dimensions
 const WIDTH = HEIGHT * 0.9;
@@ -58,6 +59,8 @@ let scoreAI, scoreRI;
 
 let timeEnd;
 
+let timeAI;
+
 canvasEl.addEventListener("mousemove", highlightGrid);
 
 canvasEl.addEventListener("click", click);
@@ -72,7 +75,7 @@ function playGame() {
 
 function click(e) {
   // if it is not playerTurn, return
-  if (timeEnd > 0) {
+  if (!playersTurn || timeEnd > 0) {
     return;
   }
 
@@ -183,9 +186,77 @@ function getGridY(row) {
   return MARGIN + CELL * row;
 }
 
+// AI function
+function AI() {
+  if (playersTurn || timeEnd > 0) {
+    return;
+  }
+
+  // count down until the AI makes its selection
+
+  if (timeAI > 0) {
+    timeAI--;
+    if (timeAI == 0) {
+      // selectSide()
+      playersTurn = !playersTurn;
+    }
+    return;
+  }
+
+  // set up priorities
+  /* 
+  First Priority -> to select a square that has 3 sides completed
+  Second Priority -> to select a square that has 0 or 1 side completed
+  Third Priority -> to select a square that has 2 sides completed
+  */
+
+  // setting up the options
+  let options = [];
+  options[0] = [];
+  options[1] = [];
+  options[2] = [];
+
+  //  populating the options
+  for (let i = 0; i < squares.length; i++) {
+    for (let j = 0; j < squares[0].length; j++) {
+      switch (squares[i][j].numSelected) {
+        case 3: //first priority
+          options[0].push(squares[i][j]);
+          break;
+
+        case 0: // second priority
+        case 1: // second priority
+          options[1].push(squares[i][j]);
+          break;
+
+        case 2: // third priority
+          options[2].push(squares[i][j]);
+          break;
+      }
+    }
+  }
+
+  // randomly choose a side based on the priority order
+  let option;
+  if (options[0].length > 0) {
+    option = options[0][Math.floor(Math.random() * options[0].length)];
+  } else if (options[1].length > 0) {
+    option = options[1][Math.floor(Math.random() * options[1].length)];
+  } else if (options[2].length > 0) {
+    option = options[2][Math.floor(Math.random() * options[2].length)];
+  }
+
+  // getting the squares coordinates
+  let coordinates = option.getFreeSideCoordinates();
+  highlightSide(coordinates.x, coordinates.y);
+
+  //  set up the delay
+  timeAI = Math.ceil(DELAY_AI * FPS);
+}
+
 function highlightGrid(e) {
   // if it is not playerTurn, return
-  if (timeEnd > 0) {
+  if (!playersTurn || timeEnd > 0) {
     return;
   }
 
@@ -386,6 +457,14 @@ class Square {
     if (this.sideTop.selected) {
       this.drawSide(Side.TOP, getColor(this.sideTop.owner, false));
     }
+  };
+
+  getFreeSideCoordinates = () => {
+    // valid coordinates for each of the sides
+    let coordinatesBottom = { x: this.left + this.w / 2, y: this.bottom - 1 };
+    let coordinatesLeft = { x: this.left, y: this.top + this.h / 2 };
+    let coordinatesRight = { x: this.right - 1, y: this.top + this.h / 2 };
+    let coordinatesTop = { x: this.left + this.w / 2, y: this.top };
   };
 
   highlightSide = (x, y) => {
