@@ -19,12 +19,17 @@ let score = 0;
 // Derived Dimension
 let tileSize = canvasEl.width / tileCount;
 
+//  snakeBody Array
+const snakeBody = [];
+
 // Arrow keys event listener
 document.addEventListener("keydown", keyDown);
 
 // The Game Loop
 function playGame() {
   clearScreen();
+  snackColiDete();
+  drawSnack();
   drawSnake();
   changeSnakePosition();
   setTimeout(playGame, 1000 / speed);
@@ -44,6 +49,18 @@ function clearScreen() {
 
 // drawSnake function
 function drawSnake() {
+  // snake body
+  conX.fillStyle = "orange";
+  for (let i = 0; i < snakeBody.length; i++) {
+    let part = snakeBody[i];
+    conX.fillRect(part.x * tileCount, part.y * tileCount, tileSize, tileSize);
+  }
+
+  snakeBody.push(new SnakeBody(snakeHeadX, snakeHeadY));
+  if (snakeBody.length > snakeTailLength) {
+    snakeBody.shift();
+  }
+  // snake head
   conX.fillStyle = "green";
   conX.fillRect(
     snakeHeadX * tileCount,
@@ -51,6 +68,12 @@ function drawSnake() {
     tileSize,
     tileSize
   );
+}
+
+// drawSnack function
+function drawSnack() {
+  conX.fillStyle = "red";
+  conX.fillRect(snackX * tileCount, snackY * tileCount, tileSize, tileSize);
 }
 
 // keyDown function
@@ -85,6 +108,23 @@ function keyDown(e) {
     yV = 0;
     xV = 1;
     return;
+  }
+}
+
+// snackColiDete function
+function snackColiDete() {
+  if (snackX === snakeHeadX && snackY === snakeHeadY) {
+    snackX = Math.floor(Math.random() * tileCount);
+    snackY = Math.floor(Math.random() * tileCount);
+    snakeTailLength++;
+  }
+}
+
+// The SnakeBody class
+class SnakeBody {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
   }
 }
 
