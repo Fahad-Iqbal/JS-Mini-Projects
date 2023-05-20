@@ -25,14 +25,56 @@ const snakeBody = [];
 // Arrow keys event listener
 document.addEventListener("keydown", keyDown);
 
+const eatSnack = new Audio("eat.wav");
+
 // The Game Loop
 function playGame() {
+  changeSnakePosition();
+
+  // handling gameOver
+  let result = gameOver();
+  if (result) {
+    return;
+  }
+
   clearScreen();
   snackColiDete();
   drawSnack();
   drawSnake();
-  changeSnakePosition();
+  drawScore();
+
   setTimeout(playGame, 1000 / speed);
+}
+
+//  gameOver function
+function gameOver() {
+  let gameOver = false;
+  if (xV === 0 && yV === 0) return false;
+
+  // checking for wall collision
+  if (
+    snakeHeadX < 0 ||
+    snakeHeadX === tileCount ||
+    snakeHeadY < 0 ||
+    snakeHeadY === tileCount
+  ) {
+    gameOver = true;
+  }
+
+  // checking the snake body collision
+  for (let i = 0; i < snakeBody.length; i++) {
+    if (snakeHeadX === snakeBody[i].x && snakeHeadY === snakeBody[i].y) {
+      gameOver = true;
+      break;
+    }
+  }
+
+  if (gameOver) {
+    conX.fillStyle = "white";
+    conX.font = "50px sans-serif";
+    conX.fillText("GAME OVER", canvasEl.width / 8, canvasEl.height / 2);
+  }
+  return gameOver;
 }
 
 // changeSnakePosition function
@@ -45,6 +87,13 @@ function changeSnakePosition() {
 function clearScreen() {
   conX.fillStyle = "black";
   conX.fillRect(0, 0, canvasEl.width, canvasEl.height);
+}
+
+// drawScore function
+function drawScore() {
+  conX.fillStyle = "white";
+  conX.font = "15px sans-serif";
+  conX.fillText(`Score: ${score}`, 20, 20);
 }
 
 // drawSnake function
@@ -114,9 +163,12 @@ function keyDown(e) {
 // snackColiDete function
 function snackColiDete() {
   if (snackX === snakeHeadX && snackY === snakeHeadY) {
+    eatSnack.play();
     snackX = Math.floor(Math.random() * tileCount);
     snackY = Math.floor(Math.random() * tileCount);
     snakeTailLength++;
+    score++;
+    speed++;
   }
 }
 
